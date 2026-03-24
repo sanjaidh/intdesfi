@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>3D Room Planner — AI Interior Designer</title>
+  <meta name="description" content="Interactive 3D room planner. Add and arrange furniture in your room just like Planner5D."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+  <!-- Three.js via importmap -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <link rel="stylesheet" href="planner.css"/>
+</head>
+<body>
+
+<!-- ══════════ TOP BAR ══════════ -->
+<header class="topbar">
+  <a href="/" class="back-btn">← Back to Designer</a>
+  <div class="topbar-center">
+    <span class="topbar-icon">🏠</span>
+    <h1 class="topbar-title">3D Room Planner</h1>
+  </div>
+  <div class="topbar-actions">
+    <button id="btn-topview"  class="tb-btn" title="Toggle top/3D view">📐 Top View</button>
+    <button id="btn-undo"     class="tb-btn" title="Undo last action">↩ Undo</button>
+    <button id="btn-clear"    class="tb-btn danger" title="Clear room">🗑 Clear</button>
+    <button id="btn-save"     class="tb-btn" title="Save layout">💾 Save</button>
+    <button id="btn-ai"       class="tb-btn accent" title="Transform to AI image">✨ AI Image</button>
+  </div>
+</header>
+
+<!-- ══════════ MAIN LAYOUT ══════════ -->
+<div class="planner-layout">
+
+  <!-- LEFT: Furniture Catalog -->
+  <aside class="catalog-panel" id="catalog-panel">
+    <div class="catalog-header">
+      <h2>Furniture</h2>
+      <p class="catalog-hint">Click an item to add it</p>
+    </div>
+
+    <!-- Search -->
+    <div class="catalog-search">
+      <input type="text" id="catalog-search" placeholder="Search furniture…" oninput="filterCatalog(this.value)"/>
+    </div>
+
+    <!-- Categories -->
+    <div class="catalog-cats" id="catalog-cats">
+      <button class="cat-btn active" data-cat="all" onclick="setCat(this,'all')">All</button>
+      <button class="cat-btn" data-cat="seating"  onclick="setCat(this,'seating')">Seating</button>
+      <button class="cat-btn" data-cat="tables"   onclick="setCat(this,'tables')">Tables</button>
+      <button class="cat-btn" data-cat="bedroom"  onclick="setCat(this,'bedroom')">Bedroom</button>
+      <button class="cat-btn" data-cat="storage"  onclick="setCat(this,'storage')">Storage</button>
+      <button class="cat-btn" data-cat="decor"    onclick="setCat(this,'decor')">Decor</button>
+    </div>
+
+    <!-- Items list -->
+    <div class="catalog-list" id="catalog-list"></div>
+  </aside>
+
+  <!-- CENTER: 3D Canvas -->
+  <main class="canvas-area">
+    <canvas id="three-canvas"></canvas>
+
+    <!-- Object Properties HUD -->
+    <div class="props-hud hidden" id="props-hud">
+      <div class="props-title">
+        <span id="props-name">Sofa</span>
+        <button onclick="deleteSelected()" class="del-btn" title="Delete">🗑</button>
+      </div>
+      <div class="props-row">
+        <label>Rotate</label>
+        <input type="range" id="prop-rotate" min="0" max="360" value="0" oninput="rotateSelected(this.value)"/>
+        <span id="prop-rotate-val">0°</span>
+      </div>
+      <div class="props-row">
+        <label>Color</label>
+        <input type="color" id="prop-color" value="#c2956e" oninput="colorSelected(this.value)"/>
+      </div>
+      <div class="props-row">
+        <label>Scale</label>
+        <input type="range" id="prop-scale" min="50" max="200" value="100" oninput="scaleSelected(this.value)"/>
+        <span id="prop-scale-val">100%</span>
+      </div>
+      <button class="clone-btn" onclick="cloneSelected()">⧉ Duplicate</button>
+    </div>
+
+    <!-- Room settings pill -->
+    <div class="room-pill">
+      <label>W <input type="number" id="room-w" value="10" min="4" max="20" onchange="resizeRoom()"/>m</label>
+      <span class="pill-sep">×</span>
+      <label>D <input type="number" id="room-d" value="10" min="4" max="20" onchange="resizeRoom()"/>m</label>
+      <label>Wall
+        <input type="color" id="wall-color" value="#ede8e0" oninput="updateWallColor(this.value)"/>
+      </label>
+      <label>Floor
+        <input type="color" id="floor-color" value="#c9b99a" oninput="updateFloorColor(this.value)"/>
+      </label>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar" id="status-bar">Click furniture to add · Drag objects to move · Scroll to zoom</div>
+  </main>
+
+  <!-- RIGHT: Quick stats panel -->
+  <aside class="stats-panel" id="stats-panel">
+    <h3>Room Info</h3>
+    <div class="stat-row"><span>Objects</span><strong id="stat-count">0</strong></div>
+    <div class="stat-row"><span>Selected</span><strong id="stat-sel">—</strong></div>
+
+    <div class="stats-sep"></div>
+    <h3>Item List</h3>
+    <ul class="item-list" id="item-list"></ul>
+
+    <div class="stats-sep"></div>
+    <h3>Tips</h3>
+    <ul class="tips-list">
+      <li>🖱 Left-drag: orbit camera</li>
+      <li>🖱 Right-drag: pan</li>
+      <li>🖱 Scroll: zoom</li>
+      <li>🔲 Click object: select</li>
+      <li>⬆ Drag selected: move</li>
+      <li>🔄 Use rotate slider</li>
+    </ul>
+  </aside>
+</div>
+
+<!-- main planner script (ES module) -->
+<script type="module" src="planner.js"></script>
+</body>
+</html>
