@@ -134,6 +134,25 @@
   </aside>
 </div>
 
+<!-- Chatbot Widget -->
+<div class="ai-chat-btn" id="ai-chat-btn" onclick="toggleChat()">
+  <span class="pulse-dot"></span> ✨ AI Assistant
+</div>
+
+<div class="ai-chat-panel hidden" id="ai-chat-panel">
+  <div class="chat-header">
+    <strong>✨ AI Design Assistant</strong>
+    <button class="chat-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div class="chat-body" id="chat-body">
+    <div class="chat-msg ai-msg">Hi! I can auto-arrange your room. Just type e.g., "Create a cozy living room" or "Add a work office layout".</div>
+  </div>
+  <div class="chat-input-area">
+    <input type="text" id="chat-input" placeholder="Type a prompt..." onkeydown="if(event.key==='Enter') sendChat()"/>
+    <button onclick="sendChat()">➤</button>
+  </div>
+</div>
+
 <!-- main planner script (ES module) -->
 <script type="module" src="planner.js"></script>
 </body>

@@ -488,7 +488,7 @@ function buildPainting(color) {
 // 6. ADD FURNITURE TO SCENE
 // ─────────────────────────────────────────────────────────────────
 
-window.addFurniture = function(defId) {
+window.addFurniture = function(defId, x = null, z = null, ry = null) {
   const def = CATALOG.find(d => d.id === defId);
   if (!def) return;
 
@@ -500,13 +500,13 @@ window.addFurniture = function(defId) {
   group.userData = {
     defId: def.id,
     defColor: def.color,
-    rotation: 0,
+    rotation: ry || 0,
     scale: 1,
   };
 
-  // Place near center with small random offset
-  const tx = (Math.random() - 0.5) * (roomW * 0.5);
-  const tz = (Math.random() - 0.5) * (roomD * 0.5);
+  // Setup position
+  let tx = x !== null ? x : (Math.random() - 0.5) * (roomW * 0.5);
+  let tz = z !== null ? z : (Math.random() - 0.5) * (roomD * 0.5);
 
   // Paintings go on the back wall
   if (defId === 'painting') {
@@ -514,6 +514,8 @@ window.addFurniture = function(defId) {
   } else {
     group.position.set(tx, 0, tz);
   }
+
+  if (ry !== null) group.rotation.y = ry;
 
   group.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
 
@@ -995,3 +997,102 @@ animate();
     console.warn('Could not load saved layout:', e);
   }
 })();
+
+// ─────────────────────────────────────────────────────────────────
+// 16. AI AUTO-ARRANGE CHATBOT
+// ─────────────────────────────────────────────────────────────────
+
+window.toggleChat = function() {
+  document.getElementById('ai-chat-panel').classList.toggle('hidden');
+  const input = document.getElementById('chat-input');
+  if (!document.getElementById('ai-chat-panel').classList.contains('hidden')) {
+    input.focus();
+  }
+};
+
+const layouts = {
+  modern: [
+    { id: 'rug', x: 0, z: 0, ry: 0 },
+    { id: 'sofa', x: 0, z: -1.2, ry: 0 },
+    { id: 'coffee-table', x: 0, z: 0.2, ry: 0 },
+    { id: 'tv-stand', x: 0, z: 2.5, ry: Math.PI }
+  ],
+  minimal: [
+    { id: 'rug', x: 0, z: 0, ry: 0 },
+    { id: 'loveseat', x: 0, z: -1.5, ry: 0 },
+    { id: 'coffee-table', x: 0, z: 0.5, ry: 0 },
+    { id: 'painting', x: 0, z: 0, ry: 0 }
+  ],
+  scandinavian: [
+    { id: 'rug', x: 0, z: -0.2, ry: 0 },
+    { id: 'sofa', x: -1.2, z: -1.0, ry: 0 },
+    { id: 'armchair', x: 1.5, z: -0.5, ry: -Math.PI / 4 },
+    { id: 'coffee-table', x: 0.2, z: 0.5, ry: 0 },
+    { id: 'painting', x: 0, z: 0, ry: 0 }
+  ]
+};
+
+window.sendChat = function() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  
+  const body = document.getElementById('chat-body');
+  body.innerHTML += `<div class="chat-msg user-msg">${text}</div>`;
+  input.value = '';
+  body.scrollTop = body.scrollHeight;
+  
+  // Show typing dot
+  const tempId = 'typing-' + Date.now();
+  body.innerHTML += `<div id="${tempId}" class="chat-msg ai-msg">...</div>`;
+  body.scrollTop = body.scrollHeight;
+
+  setTimeout(() => processAiChat(text, tempId), 800);
+};
+
+function processAiChat(text, tempId) {
+  const lower = text.toLowerCase();
+  const body = document.getElementById('chat-body');
+  document.getElementById(tempId).remove();
+  
+  let response = "I'm still learning! Try asking me to 'Create a modern living room', 'make a scandinavian setup', or 'add a sofa'.";
+  
+  if (lower.includes('modern') || lower.includes('living room')) {
+    applyLayout(layouts.modern);
+    response = "I've arranged a full modern living room for you! Feel free to drag things around.";
+  } else if (lower.includes('minimal')) {
+    applyLayout(layouts.minimal);
+    response = "Minimalism is great. I've set up a clean, minimal space.";
+  } else if (lower.includes('scandinavian') || lower.includes('cozy')) {
+    applyLayout(layouts.scandinavian);
+    response = "I've arranged a cozy scandinavian layout with an armchair and rug.";
+  } else if (lower.includes('sofa') || lower.includes('couch')) {
+    addFurniture('sofa');
+    response = "Added a sofa to the room! You can drag it to position.";
+  } else if (lower.includes('table')) {
+    addFurniture('coffee-table');
+    response = "Added a coffee table! Drag it where you like.";
+  } else if (lower.includes('clear')) {
+    document.getElementById('btn-clear').click();
+    response = "Cleared the room!";
+  }
+
+  body.innerHTML += `<div class="chat-msg ai-msg">${response}</div>`;
+  body.scrollTop = body.scrollHeight;
+}
+
+function applyLayout(layout) {
+  // Clear room
+  if (furnitureObjects.length > 0) {
+    furnitureObjects.forEach(e => scene.remove(e.group));
+    furnitureObjects = [];
+    selectObject(null);
+  }
+  
+  // Stagger adding items for effect
+  layout.forEach((item, i) => {
+    setTimeout(() => {
+      addFurniture(item.id, item.x, item.z, item.ry);
+    }, i * 200);
+  });
+}
