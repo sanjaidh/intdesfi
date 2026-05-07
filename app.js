@@ -39,7 +39,7 @@ const COLOR_NAMES = {
   '#1A1A2E':'Midnight','#16213E':'Deep Ocean','#C9A96E':'Champagne','#8B7355':'Khaki','#2C1810':'Espresso',
 };
 
-const API = 'https://intdes.onrender.com';
+const API = 'https://design-mnx3.onrender.com';
 
 // ─────────────────────────────────────────────────────
 // 2. INIT
